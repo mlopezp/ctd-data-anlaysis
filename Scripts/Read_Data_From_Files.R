@@ -179,15 +179,14 @@ map("Umm Al Arshan", ~plots(df, .x))
 # save files ####
 
 # save each grid as a page in  pdf in the Figures folder
-# pdf("./../Figures/all sites.pdf")
-# site_plots
-# dev.off()
+pdf("./../Figures/all sites.pdf", height = 5, width = 7)
+site_plots
+dev.off()
 
 # save each grid as individual png
 plot.names <- paste0(site.names, ".png") #generate names for each plot
-
 walk2(plot.names, site_plots, ~ggsave(filename = .x, plot = .y,
                                       path = "../Figures/",
-                                      height = 7, width = 7))
+                                      height = 5, width = 7))
 
 

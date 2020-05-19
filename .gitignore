@@ -75,7 +75,8 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-# Figures folder
+# Folders to ignore
 Figures/
+Data/
 
 
