@@ -10,6 +10,7 @@ library(rnaturalearthdata)
 library(rgeos)
 library(sf)
 library(RColorBrewer)
+library(zoo)
 
 # importa data and merge into one table ####
 
@@ -43,19 +44,25 @@ mdata <- metadata %>%
 
 # Join data and metadata tables using file number for primary key.
 df <- data %>%
-  left_join(mdata, by = "file") %>%
-  select(file, Date, time, latitude, longitude, site, everything())
+  left_join(mdata, by = "file")
 
 # clean the data ####
 # standardize names
 
 df$site <- df$site %>%
+  str_replace("\"", "[]") %>%
   str_replace("^[(M|m)].*", "Maydan Mahzam") %>%
   str_replace("^[(F|f)].*", "Fasht East Halul") %>%
   str_replace("^[(B|b)].*", "Binzayan") %>%
   str_replace("^[(U|u)].*", "Umm Al Arshan") %>%
   str_replace("^[(S|s)].*", "Sheraoh") %>%
   str_replace("^[(NW|nw)].*", "NW Halul")
+
+# add quarter column
+df <- df %>%
+  mutate(Quarter = as.yearqtr(Date, format = "%Y-%m-%d") %>%
+           format(format = "Q%q-%Y")) %>%
+  select(file, Date, Quarter, latitude, longitude, site, everything(), -time)
 
 site.names <- unique(df$site)
 site.names <- set_names(site.names) # use unique names for each site for labels in plots
@@ -67,9 +74,8 @@ plots <- function(dataframe, sitename) { # plots function requires a dataframe a
 #ggplot object - set defaults for following plots
   p <- ggplot(data = dataframe %>%
               na.omit() %>%
-              filter(site == sitename) %>%
-              mutate(Date = as.character(Date)),
-              aes(color = Date, group = Date)) +
+              filter(site == sitename),
+              aes(color = Quarter, group = Date)) +
   geom_path() +
   scale_y_reverse(breaks = seq(0,40,5)) +
   theme_bw() +
@@ -88,7 +94,7 @@ temp <- p +
 
 # salinity plot
 salinity<- p +
-  aes(x = salinity, y = depth, group=Date) +
+  aes(x = salinity, y = depth) +
   scale_x_continuous(#breaks = seq(39,41,.05),
     position = "top") +
   labs(x = expression(~Salinity~(PSU))) +
@@ -96,7 +102,7 @@ salinity<- p +
 
 # dissolve oxygen plot
 oxygen<- p +
-  aes(x = oxygen, y = depth, group=Date) +
+  aes(x = oxygen, y = depth) +
   scale_x_continuous(#breaks = seq(6.0,7.0,.1),
     position = "top") +
   labs(x = expression(~DO~(mgL^{-3}))) +
@@ -104,14 +110,14 @@ oxygen<- p +
 
 # fluorescence plot
 fluorescence<- p +
-  aes(x = fluorescence, y = depth, group=Date) +
+  aes(x = fluorescence, y = depth) +
   scale_x_continuous(#breaks = seq(0, 1.1, .2),
     position = "top") +
   labs(x = expression(~Fluorescence~(mgm^{-3})),y = Depth~(m))
 
 # turbidity plot
 turbidity<- p +
-  aes(x = turbidity, y = depth, group=Date) +
+  aes(x = turbidity, y = depth) +
   scale_x_continuous(#breaks = seq(0.2,1.3,.1),
     position = "top") +
   labs(x = expression(~Turbidity~(NTU))) +
@@ -141,7 +147,7 @@ map<-ggplot(data = world) +
              size = 3,
              shape = 16)+
   ggtitle("Sampling Location")+
-  theme(plot.title= element_text(hjust = 0.5,vjust = -8),
+  theme(plot.title= element_text(hjust = 0.5, vjust = -8),
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
   annotate(geom = "text", x = 52.5, y = 26.5, label = "Persian Gulf",
@@ -151,8 +157,7 @@ map<-ggplot(data = world) +
 # grid with all plots
 P1 <- plot_grid(temp,salinity, map,
               fluorescence, turbidity,oxygen,
-              nrow = 2, align = "h",label_size = 12,
-              rel_heights = 0.5)
+              nrow = 2, align = "h",label_size = 12)
 # title object
 title <- ggdraw() +
   draw_label(sitename)
@@ -167,6 +172,22 @@ plot_grid(title, P1, legend, ncol=1, rel_heights = c(0.05, 1, 0.05))
 # Loop to make separte pages for each site ####
 site_plots <- map(site.names, ~plots(df, .x))
 
-# to run this for one site replace site.names with the site name in quotes
+# to run this for one site replace site.names with the site name in quotes ####
 # eg.
- map("Umm Al Arshan", ~plots(df, .x))
+map("Umm Al Arshan", ~plots(df, .x))
+
+# save files ####
+
+# save each grid as a page in  pdf in the Figures folder
+# pdf("./../Figures/all sites.pdf")
+# site_plots
+# dev.off()
+
+# save each grid as individual png
+plot.names <- paste0(site.names, ".png") #generate names for each plot
+
+walk2(plot.names, site_plots, ~ggsave(filename = .x, plot = .y,
+                                      path = "../Figures/",
+                                      height = 7, width = 7))
+
+
