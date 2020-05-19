@@ -75,7 +75,8 @@ plots <- function(dataframe, sitename) { # plots function requires a dataframe a
   theme_bw() +
   theme(axis.text = element_text(size = 12, colour = 1),
         axis.title = element_text(size = 14, colour = 1),
-        legend.position = "none") +
+        legend.position = "none",
+        plot.margin = unit(c(0,0.2,0,0),"cm")) +
   scale_color_brewer(palette = "Set1")
 
 # temperature plot
@@ -120,7 +121,8 @@ turbidity<- p +
 
 theme_set(theme_bw())
 
-world <- ne_countries(scale = "medium", returnclass = "sf", country = c("Qatar", "Bahrain", "Saudi Arabia", "Iran"))
+world <- ne_countries(scale = "medium", returnclass = "sf",
+                      country = c("Qatar", "Bahrain", "Saudi Arabia", "Iran"))
 class(world)
 world_points<- st_centroid(world)
 world_points <- cbind(world, st_coordinates(st_centroid(world$geometry)))
@@ -128,12 +130,20 @@ world_points <- cbind(world, st_coordinates(st_centroid(world$geometry)))
 map<-ggplot(data = world) +
   geom_sf() +
   coord_sf(xlim = c(49, 54),
-           ylim = c(24, 28), expand = FALSE)+
-  geom_text(data= world_points,aes(x=X, y=Y, label=name))+
-  geom_point(data = dataframe %>% filter(site == sitename), aes(x = longitude, y = latitude), size = 3,
+           ylim = c(24, 28),
+           expand = FALSE,
+           label_axes = list(top = "E", left = "N")) +
+  geom_text(data= world_points,
+            aes(x=X, y=Y, label=name))+
+  geom_point(data = dataframe %>%
+               filter(site == sitename),
+             aes(x = longitude, y = latitude),
+             size = 3,
              shape = 16)+
   ggtitle("Sampling Location")+
-  theme(plot.title= element_text(hjust = 0.5,vjust = -8), axis.title.x = element_blank(),axis.title.y = element_blank()) +
+  theme(plot.title= element_text(hjust = 0.5,vjust = -8),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
   annotate(geom = "text", x = 52.5, y = 26.5, label = "Persian Gulf",
            fontface = "italic", color = "grey22", size = 4,angle = 325)
 
