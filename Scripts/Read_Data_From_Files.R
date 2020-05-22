@@ -177,7 +177,7 @@ plots <- function(dataframe, sitename) { # plots function requires a dataframe a
 
   # legend object
   legend <- get_legend(temp +
-                         theme(legend.position = "bottom"))
+                         theme(legend.position = "bottom", legend.title = element_blank()))
 
   # grid with title, plots and legend
   plot_grid(title, P1, legend,
@@ -190,14 +190,14 @@ site_plots <- map(site.names, ~plots(df, .x))
 
 # to run this for one site replace the site name in quotes ####
 # eg.
-plots(df, "Maydan Mahzam")
+# plots(df, "Maydan Mahzam")
 
 # save files ####
 
 # save each grid as a page in  pdf in the Figures folder
-pdf("./../Figures/all sites.pdf", height = 6, width = 8.5)
-site_plots
-dev.off()
+# pdf("./../Figures/all sites.pdf", height = 6, width = 8.5)
+# site_plots
+# dev.off()
 
 # save each grid as individual png
 #plot.names <- paste0(site.names, ".png") #generate names for each plot
