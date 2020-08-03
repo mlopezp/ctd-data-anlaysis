@@ -15,7 +15,7 @@ library(zoo)
 # importa data and merge into one table ####
 
 # set working directory to the directory where the cnv files are located.
-#setwd("./Data")
+setwd("./Data")
 
 # get the names of .cnv files in the data folder and put them in a vector called file.names
 file.names <- list.files(path = "./", pattern = "*.cnv")
@@ -78,8 +78,8 @@ site.names <- set_names(site.names) # use unique names for each site for labels 
 # plots function ####
 plots <- function(dataframe, sitename) { # plots function requires a dataframe and site name as parameters
 
-  # create a color scale that will match the quarter independently of how many quarters were sampled
-  myColors <- brewer.pal(12, "Paired")
+  # create a color scale that will match the quarter independently of how many quarters were sampled. Up to 9 quarters total.
+  myColors <- brewer.pal(9, "Set1")
   names(myColors) <- levels(df$quarter)
   colScale <- scale_colour_manual(values = myColors, drop = TRUE)
 
@@ -122,7 +122,7 @@ plots <- function(dataframe, sitename) { # plots function requires a dataframe a
   fluorescence <- p +
     aes(x = fluorescence) +
     #scale_x_continuous(breaks = seq(0, 1.1,0.2) +
-    labs(x = expression(~Fluorescence~(mgm^{-3})),y = Depth~(m))
+    labs(x = expression(~Fluorescence~(mgm^{-3})), y = Depth~(m))
 
   # turbidity plot
   turbidity <- p +
@@ -150,8 +150,8 @@ plots <- function(dataframe, sitename) { # plots function requires a dataframe a
              label_axes = list(top = "E", left = "N")) +
     geom_text(data = world_points,
                      aes(x = X, y = Y, label = name)) +
-    geom_point(data = dataframe %>%
-                      filter(site == sitename),
+    geom_point(data = df %>%
+                      filter(site == "Maydan Mahzam"),
                       aes(x = longitude, y = latitude),
                       size = 3, shape = 16) +
     ggtitle("Sampling Location") +
@@ -205,4 +205,35 @@ site_plots <- map(site.names, ~plots(df, .x))
 #                                       path = "../Figures/",
 #                                       height = 7, width = 9))
 
+df2 <- df %>%
+  select(file:salinity, oxygen, fluorescence, turbidity) %>%
+  pivot_longer(cols = temperature:turbidity,
+               names_to = "variable") %>%
+  mutate(variable = as_factor(variable),
+         site = as_factor(site)) %>%
+  filter(site != "Restore Nursery" & site != "NW Halul")
 
+df2$site <- factor(df2$site, levels = c("Binzayan", "Umm Al Arshan", "Fasht East Halul", "Maydan Mahzam", "Sheraoh"))
+
+df2$labels <- factor(df2$variable, labels = c("~Temperature~(degree~C)", "~Salinity~(PSU)", "~DO~(mgL^{-3})", "~Fluorescence~(mgm^{-3})", "~Turbidity~(NTU)"))
+
+q <- ggplot(data = df2 %>%
+              na.omit(),
+              aes(y = depth, x = value, color = quarter, group = date)) + # used date for grouping because in some cases 2 drops were donde in one quarter
+  geom_path() + # to draw profiles as lines
+  scale_x_continuous() +
+  scale_y_reverse(breaks = seq(0, 40, 5), position = "right") +
+  ylab("Depth (m)") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12, colour = 1),
+        axis.title = element_text(size = 14, colour = 1),
+        axis.title.x = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank(),
+        plot.margin = unit(c(0,0.2,0,0),"cm")) +
+  colScale +
+  facet_grid(site ~ labels, scales = "free", switch = "y", labeller = labeller(site = label_value, labels = label_parsed))
+
+pdf("./../Figures/report_fig.pdf", height = 11, width = 8.5)
+q
+dev.off()
